@@ -159,6 +159,23 @@ async function checkSession() {
   if (data.authenticated) renderGallery();
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForGeneration(jobId) {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    await wait(2000);
+    const response = await fetch(`/api/generate/${jobId}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || '查询生成结果失败');
+    if (data.status === 'done') return data.image;
+    if (data.status === 'error') throw new Error(data.error || '生成失败');
+    setStatus(`正在生成图片... ${Math.min(6, Math.floor((attempt + 1) / 5) + 1)}0秒内通常完成`);
+  }
+  throw new Error('生成时间过长，请稍后再试。');
+}
+
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   loginError.textContent = '';
@@ -244,10 +261,11 @@ generateButton.addEventListener('click', async () => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '生成失败');
 
-    showResult(data.image);
+    const image = data.image || await waitForGeneration(data.jobId);
+    showResult(image);
     addToGallery({
       id: crypto.randomUUID(),
-      image: data.image,
+      image,
       prompt,
       quality: '1k',
       aspectRatio: ratioSelect.value,

@@ -26,6 +26,7 @@ const PORT = process.env.PORT || 3000;
 const APP_PASSWORD = process.env.APP_PASSWORD || 'sam';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-this-secret';
 const COOKIE_NAME = 'image2_session';
+const jobs = new Map();
 
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
@@ -188,22 +189,40 @@ app.post('/api/generate', requireAuth, upload.array('referenceImages', 4), async
     }
 
     const files = req.files || [];
+    const mode = files.length ? 'image-to-image' : 'text-to-image';
     console.log('generate request', {
-      mode: files.length ? 'image-to-image' : 'text-to-image',
+      mode,
       files: files.map((file) => ({ type: file.mimetype, size: file.size })),
       aspectRatio
     });
 
-    const image = files.length
-      ? await callImageToImage({ prompt, quality, aspectRatio, files })
-      : await callTextToImage({ prompt, quality, aspectRatio });
+    const jobId = crypto.randomUUID();
+    jobs.set(jobId, { status: 'running', createdAt: Date.now(), mode });
+    res.status(202).json({ jobId });
 
-    console.log('generate success', { mode: files.length ? 'image-to-image' : 'text-to-image', ms: Date.now() - startedAt });
-    res.json({ image });
+    try {
+      const image = files.length
+        ? await callImageToImage({ prompt, quality, aspectRatio, files })
+        : await callTextToImage({ prompt, quality, aspectRatio });
+      jobs.set(jobId, { status: 'done', image, createdAt: Date.now(), mode });
+      console.log('generate success', { mode, jobId, ms: Date.now() - startedAt });
+    } catch (error) {
+      jobs.set(jobId, { status: 'error', error: error.message || '生成失败', createdAt: Date.now(), mode });
+      console.error('generate failed', { message: error.message, jobId, ms: Date.now() - startedAt });
+    }
   } catch (error) {
-    console.error('generate failed', { message: error.message, ms: Date.now() - startedAt });
+    console.error('generate failed before job', { message: error.message, ms: Date.now() - startedAt });
     res.status(500).json({ error: error.message || '生成失败' });
   }
+});
+
+app.get('/api/generate/:jobId', requireAuth, (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: '生成任务不存在或已过期' });
+    return;
+  }
+  res.json(job);
 });
 
 app.use((error, _req, res, _next) => {

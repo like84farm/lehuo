@@ -85,10 +85,10 @@ function getImageApiConfig() {
 
 function mapSize(aspectRatio) {
   const sizes = {
-    '1:1': '1024x1024',
-    '16:9': '1024x576',
-    '9:16': '576x1024',
-    '3:4': '768x1024'
+    '3:4': '1024x1536',
+    '9:16': '1024x1536',
+    '16:9': '1536x1024',
+    '1:1': '1024x1024'
   };
   return sizes[aspectRatio] || sizes['1:1'];
 }

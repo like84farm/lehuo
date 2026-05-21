@@ -93,12 +93,26 @@ function mapSize(aspectRatio) {
   return sizes[aspectRatio] || sizes['1:1'];
 }
 
-function parseImageFromResponse(data) {
-  const item = data?.data?.[0] || data?.output?.[0] || data?.images?.[0] || data;
+function imageFromItem(item) {
   const base64 = item?.b64_json || item?.base64 || item?.image_base64;
   const url = item?.url || item?.image_url;
   if (base64) return `data:image/png;base64,${base64}`;
   if (url) return url;
+  return null;
+}
+
+function parseImageFromResponse(data, preferLast = false) {
+  const list = data?.data || data?.output || data?.images;
+  if (Array.isArray(list) && list.length) {
+    const items = preferLast ? [...list].reverse() : list;
+    for (const item of items) {
+      const image = imageFromItem(item);
+      if (image) return image;
+    }
+  }
+
+  const image = imageFromItem(data);
+  if (image) return image;
   throw new Error('图片接口没有返回可识别的图片数据');
 }
 
@@ -150,7 +164,7 @@ async function callImageToImage({ prompt, quality, aspectRatio, files }) {
   if (!response.ok) {
     throw new Error(data?.error?.message || data?.message || '参考图生成失败');
   }
-  return parseImageFromResponse(data);
+  return parseImageFromResponse(data, true);
 }
 
 app.post('/api/login', (req, res) => {

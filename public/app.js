@@ -15,14 +15,9 @@ const statusText = document.querySelector('#statusText');
 const resultEmpty = document.querySelector('#resultEmpty');
 const resultImage = document.querySelector('#resultImage');
 const downloadLink = document.querySelector('#downloadLink');
-const gallery = document.querySelector('#gallery');
-const clearGalleryButton = document.querySelector('#clearGalleryButton');
-
-const galleryKey = 'image2-gallery';
 const maxReferenceFiles = 4;
 const maxReferenceDimension = 1600;
 const referenceOutputQuality = 0.82;
-const maxStoredImageLength = 2_500_000;
 let referenceFiles = [];
 
 function setAuthenticated(authenticated) {
@@ -35,96 +30,12 @@ function setStatus(message, isError = false) {
   statusText.classList.toggle('error', isError);
 }
 
-function loadGallery() {
-  try {
-    return JSON.parse(localStorage.getItem(galleryKey) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function saveGallery(items) {
-  try {
-    localStorage.setItem(galleryKey, JSON.stringify(items.slice(0, 30)));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function renderGallery() {
-  const items = loadGallery();
-  gallery.innerHTML = '';
-
-  if (!items.length) {
-    gallery.innerHTML = '<div class="empty">还没有生成记录。</div>';
-    return;
-  }
-
-  for (const item of items) {
-    const card = document.createElement('article');
-    card.className = 'gallery-item';
-
-    const image = document.createElement('img');
-    image.src = item.image;
-    image.alt = item.prompt;
-    image.loading = 'lazy';
-    image.addEventListener('click', () => showResult(item.image));
-
-    const meta = document.createElement('div');
-    meta.className = 'gallery-meta';
-
-    const text = document.createElement('p');
-    text.textContent = item.prompt;
-
-    const info = document.createElement('p');
-    info.textContent = `${item.quality} · ${item.aspectRatio} · ${new Date(item.createdAt).toLocaleString()}`;
-
-    const actions = document.createElement('div');
-    actions.className = 'gallery-actions';
-
-    const viewButton = document.createElement('button');
-    viewButton.type = 'button';
-    viewButton.textContent = '查看';
-    viewButton.addEventListener('click', () => showResult(item.image));
-
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.textContent = '删除';
-    deleteButton.addEventListener('click', () => {
-      saveGallery(loadGallery().filter((entry) => entry.id !== item.id));
-      renderGallery();
-    });
-
-    actions.append(viewButton, deleteButton);
-    meta.append(text, info, actions);
-    card.append(image, meta);
-    gallery.append(card);
-  }
-}
-
 function showResult(image) {
   resultImage.src = image;
   downloadLink.href = image;
   resultImage.classList.remove('hidden');
   downloadLink.classList.remove('hidden');
   resultEmpty.classList.add('hidden');
-}
-
-function addToGallery(entry) {
-  if (entry.image.length > maxStoredImageLength) {
-    setStatus('生成完成。图片较大，已显示结果但未保存到浏览器图库。');
-    return;
-  }
-
-  const items = loadGallery();
-  items.unshift(entry);
-  if (!saveGallery(items)) {
-    saveGallery([]);
-    setStatus('生成完成。浏览器图库空间已满，已清空旧图库，本次结果未保存。');
-    return;
-  }
-  renderGallery();
 }
 
 function loadImage(file) {
@@ -171,7 +82,6 @@ async function checkSession() {
   const response = await fetch('/api/session');
   const data = await response.json();
   setAuthenticated(Boolean(data.authenticated));
-  if (data.authenticated) renderGallery();
 }
 
 function wait(ms) {
@@ -209,7 +119,6 @@ loginForm.addEventListener('submit', async (event) => {
 
   passwordInput.value = '';
   setAuthenticated(true);
-  renderGallery();
 });
 
 logoutButton.addEventListener('click', async () => {
@@ -278,26 +187,12 @@ generateButton.addEventListener('click', async () => {
 
     const image = data.image || await waitForGeneration(data.jobId);
     showResult(image);
-    addToGallery({
-      id: crypto.randomUUID(),
-      image,
-      prompt,
-      quality: '1k',
-      aspectRatio: ratioSelect.value,
-      createdAt: new Date().toISOString()
-    });
     setStatus('生成完成。');
   } catch (error) {
     setStatus(error.message || '生成失败', true);
   } finally {
     generateButton.disabled = false;
   }
-});
-
-clearGalleryButton.addEventListener('click', () => {
-  if (!confirm('确定清空当前浏览器里的图库吗？')) return;
-  saveGallery([]);
-  renderGallery();
 });
 
 checkSession().catch(() => setAuthenticated(false));

@@ -19,6 +19,9 @@ const gallery = document.querySelector('#gallery');
 const clearGalleryButton = document.querySelector('#clearGalleryButton');
 
 const galleryKey = 'image2-gallery';
+const maxReferenceFiles = 4;
+const maxReferenceDimension = 1600;
+const referenceOutputQuality = 0.82;
 let referenceFiles = [];
 
 function setAuthenticated(authenticated) {
@@ -109,6 +112,46 @@ function addToGallery(entry) {
   renderGallery();
 }
 
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`无法读取图片：${file.name}`));
+    };
+    image.src = url;
+  });
+}
+
+async function resizeReferenceImage(file) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    throw new Error('参考图仅支持 PNG、JPG、WEBP。');
+  }
+
+  const image = await loadImage(file);
+  const scale = Math.min(1, maxReferenceDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', referenceOutputQuality));
+  if (!blob) throw new Error(`无法处理图片：${file.name}`);
+  return new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+}
+
+async function prepareReferenceFiles(files) {
+  return Promise.all(files.map(resizeReferenceImage));
+}
+
 async function checkSession() {
   const response = await fetch('/api/session');
   const data = await response.json();
@@ -154,11 +197,24 @@ function renderReferencePreviews() {
   }
 }
 
-referenceInput.addEventListener('change', () => {
+referenceInput.addEventListener('change', async () => {
   const files = Array.from(referenceInput.files || []);
-  referenceFiles = files.slice(0, 4);
+  referenceFiles = [];
   renderReferencePreviews();
-  if (files.length > 4) setStatus('最多使用前 4 张参考图。');
+
+  if (!files.length) return;
+
+  setStatus('正在处理参考图...');
+  try {
+    referenceFiles = await prepareReferenceFiles(files.slice(0, maxReferenceFiles));
+    renderReferencePreviews();
+    setStatus(files.length > maxReferenceFiles ? `已使用前 ${maxReferenceFiles} 张参考图。` : '参考图已准备好。');
+  } catch (error) {
+    referenceInput.value = '';
+    referenceFiles = [];
+    renderReferencePreviews();
+    setStatus(error.message || '参考图处理失败。', true);
+  }
 });
 
 removeReferenceButton.addEventListener('click', () => {

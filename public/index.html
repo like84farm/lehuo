@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image2 生成器</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section id="loginView" class="card login-card hidden">
+      <p class="eyebrow">Image2</p>
+      <h1>图片生成器</h1>
+      <p class="muted">输入访问密码后开始生成图片。</p>
+      <form id="loginForm" class="stack">
+        <input id="passwordInput" type="password" autocomplete="current-password" placeholder="访问密码" required>
+        <button type="submit">登录</button>
+      </form>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <section id="appView" class="hidden">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Image2</p>
+          <h1>图片生成器</h1>
+          <p class="muted">文生图、参考图生成，结果保存在当前浏览器。</p>
+        </div>
+        <button id="logoutButton" class="ghost" type="button">退出</button>
+      </header>
+
+      <div class="grid">
+        <section class="card composer">
+          <label for="promptInput">提示词</label>
+          <textarea id="promptInput" rows="7" placeholder="描述你想生成的画面，例如：清晨海边的极简建筑，柔和自然光，电影感"></textarea>
+
+          <div class="controls">
+            <div>
+              <label>质量</label>
+              <div class="fixed-field">1k</div>
+            </div>
+            <div>
+              <label for="ratioSelect">比例</label>
+              <select id="ratioSelect">
+                <option value="1:1">1:1</option>
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+                <option value="3:4">3:4</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="upload-box">
+            <label for="referenceInput">参考图（可选，可多选）</label>
+            <input id="referenceInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+            <div id="previewWrap" class="preview hidden">
+              <div id="previewImages" class="preview-images"></div>
+              <button id="removeReferenceButton" class="ghost" type="button">移除参考图</button>
+            </div>
+          </div>
+
+          <button id="generateButton" type="button">生成图片</button>
+          <p id="statusText" class="status"></p>
+        </section>
+
+        <section class="card result-card">
+          <div class="section-title">
+            <h2>最新结果</h2>
+            <a id="downloadLink" class="download hidden" download="image2-result.png">下载</a>
+          </div>
+          <div id="resultEmpty" class="empty">生成后会显示在这里。</div>
+          <img id="resultImage" class="result-image hidden" alt="生成结果">
+        </section>
+      </div>
+
+      <section class="card gallery-card">
+        <div class="section-title">
+          <h2>图库</h2>
+          <button id="clearGalleryButton" class="ghost" type="button">清空</button>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </section>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

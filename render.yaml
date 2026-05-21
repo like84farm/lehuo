@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: image2-generator
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: APP_PASSWORD
+        value: sam
+      - key: IMAGE_API_BASE_URL
+        value: https://llmhub.ltd/v1
+      - key: IMAGE_MODEL
+        value: gpt-image-2
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: IMAGE_API_KEY
+        sync: false

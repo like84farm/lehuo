@@ -22,6 +22,7 @@ const galleryKey = 'image2-gallery';
 const maxReferenceFiles = 4;
 const maxReferenceDimension = 1600;
 const referenceOutputQuality = 0.82;
+const maxStoredImageLength = 2_500_000;
 let referenceFiles = [];
 
 function setAuthenticated(authenticated) {
@@ -43,7 +44,12 @@ function loadGallery() {
 }
 
 function saveGallery(items) {
-  localStorage.setItem(galleryKey, JSON.stringify(items.slice(0, 30)));
+  try {
+    localStorage.setItem(galleryKey, JSON.stringify(items.slice(0, 30)));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function renderGallery() {
@@ -106,9 +112,18 @@ function showResult(image) {
 }
 
 function addToGallery(entry) {
+  if (entry.image.length > maxStoredImageLength) {
+    setStatus('生成完成。图片较大，已显示结果但未保存到浏览器图库。');
+    return;
+  }
+
   const items = loadGallery();
   items.unshift(entry);
-  saveGallery(items);
+  if (!saveGallery(items)) {
+    saveGallery([]);
+    setStatus('生成完成。浏览器图库空间已满，已清空旧图库，本次结果未保存。');
+    return;
+  }
   renderGallery();
 }
 

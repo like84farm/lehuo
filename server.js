@@ -172,6 +172,7 @@ app.get('/api/session', (req, res) => {
 });
 
 app.post('/api/generate', requireAuth, upload.array('referenceImages', 4), async (req, res) => {
+  const startedAt = Date.now();
   try {
     const prompt = String(req.body?.prompt || '').trim();
     const quality = '1k';
@@ -187,12 +188,20 @@ app.post('/api/generate', requireAuth, upload.array('referenceImages', 4), async
     }
 
     const files = req.files || [];
+    console.log('generate request', {
+      mode: files.length ? 'image-to-image' : 'text-to-image',
+      files: files.map((file) => ({ type: file.mimetype, size: file.size })),
+      aspectRatio
+    });
+
     const image = files.length
       ? await callImageToImage({ prompt, quality, aspectRatio, files })
       : await callTextToImage({ prompt, quality, aspectRatio });
 
+    console.log('generate success', { mode: files.length ? 'image-to-image' : 'text-to-image', ms: Date.now() - startedAt });
     res.json({ image });
   } catch (error) {
+    console.error('generate failed', { message: error.message, ms: Date.now() - startedAt });
     res.status(500).json({ error: error.message || '生成失败' });
   }
 });

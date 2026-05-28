@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乐活小红书文案生成器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">乐活互动 · 新媒体工具</p>
+        <h1>乐活小红书文案生成器</h1>
+        <p class="hero-text">输入活动信息，一键生成标题、封面大字、正文和标签，适合员工快速完成小红书发帖初稿。</p>
+      </div>
+      <div class="hero-card">
+        <span>V1</span>
+        <strong>本地模板版</strong>
+        <p>不接入 AI 接口，先解决标题和文案思路。</p>
+      </div>
+    </section>
+
+    <section class="panel input-panel">
+      <div class="section-title">
+        <h2>输入活动信息</h2>
+        <p>内容越具体，生成结果越贴近真实案例。</p>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>城市</span>
+          <select id="city">
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+            <option value="东莞">东莞</option>
+            <option value="佛山">佛山</option>
+            <option value="珠三角">珠三角</option>
+          </select>
+        </label>
+
+        <label>
+          <span>客户类型</span>
+          <select id="customerType">
+            <option value="商场运营">商场运营</option>
+            <option value="企业 HR">企业 HR</option>
+            <option value="企业行政">企业行政</option>
+            <option value="婚礼新人">婚礼新人</option>
+            <option value="学校社团">学校社团</option>
+            <option value="展会主办方">展会主办方</option>
+          </select>
+        </label>
+
+        <label>
+          <span>活动类型</span>
+          <select id="activityType">
+            <option value="DIY团建">DIY团建</option>
+            <option value="商场节日活动">商场节日活动</option>
+            <option value="企业员工活动">企业员工活动</option>
+            <option value="婚礼互动">婚礼互动</option>
+            <option value="photobooth拍照互动">photobooth拍照互动</option>
+            <option value="学校晚会互动">学校晚会互动</option>
+          </select>
+        </label>
+
+        <label>
+          <span>文案风格</span>
+          <select id="styleType">
+            <option value="自然种草">自然种草</option>
+            <option value="专业可信">专业可信</option>
+            <option value="轻松活泼">轻松活泼</option>
+            <option value="高级精致">高级精致</option>
+            <option value="成交转化">成交转化</option>
+          </select>
+        </label>
+
+        <label class="full">
+          <span>项目场景</span>
+          <textarea id="scene" rows="4" placeholder="例如：艾草花束 DIY - 天虹商场端午活动，现场有亲子家庭和节日打卡布置"></textarea>
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button id="generateBtn" class="primary">生成文案</button>
+        <button id="copyBtn" class="secondary">复制结果</button>
+        <button id="resetBtn" class="ghost">清空重写</button>
+      </div>
+    </section>
+
+    <section class="panel output-panel">
+      <div class="section-title">
+        <h2>输出结果</h2>
+        <p id="statusText">请先填写活动信息，然后点击“生成文案”。</p>
+      </div>
+
+      <div class="output-grid">
+        <article class="output-card">
+          <h3>小红书标题（5 个）</h3>
+          <ol id="titles" class="result-list placeholder">
+            <li>等待生成...</li>
+          </ol>
+        </article>
+
+        <article class="output-card">
+          <h3>封面大字文案（3 条）</h3>
+          <ul id="covers" class="result-list placeholder">
+            <li>等待生成...</li>
+          </ul>
+        </article>
+
+        <article class="output-card large">
+          <h3>小红书正文（1 篇）</h3>
+          <div id="bodyCopy" class="body-copy placeholder">等待生成...</div>
+        </article>
+
+        <article class="output-card large">
+          <h3>小红书标签（10 个）</h3>
+          <div id="tags" class="tag-box placeholder">等待生成...</div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

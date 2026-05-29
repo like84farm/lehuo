@@ -104,6 +104,28 @@ h2 {
   padding: 40px 0;
 }
 
+.tool-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.tool-nav a {
+  border: 1px solid rgba(231, 224, 214, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--text);
+  font-weight: 800;
+  padding: 10px 14px;
+  text-decoration: none;
+}
+
+.tool-nav a.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .card {
   border: 1px solid rgba(231, 224, 214, 0.9);
   border-radius: var(--radius);

@@ -16,3 +16,9 @@ services:
         generateValue: true
       - key: IMAGE_API_KEY
         sync: false
+      - key: COPYWRITER_API_BASE_URL
+        value: https://api.deepseek.com/v1
+      - key: COPYWRITER_MODEL
+        value: deepseek-chat
+      - key: COPYWRITER_API_KEY
+        sync: false

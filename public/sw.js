@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lehuo-pwa-v1';
+const CACHE_NAME = 'lehuo-pwa-v2';
 const APP_SHELL = [
   '/',
   '/styles.css',
@@ -7,7 +7,11 @@ const APP_SHELL = [
   '/icons/icon-180.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-512-maskable.png'
+  '/icons/icon-512-maskable.png',
+  '/copywriter/',
+  '/copywriter/index.html',
+  '/copywriter/style.css',
+  '/copywriter/script.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,15 +43,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
-          return response;
-        })
-        .catch(() => caches.match('/'))
-    );
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      event.respondWith(
+        fetch(request)
+          .then((response) => {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+            return response;
+          })
+          .catch(() => caches.match('/'))
+      );
+    }
     return;
   }
 

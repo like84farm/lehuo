@@ -171,6 +171,142 @@ async function callImageToImage({ prompt, quality, aspectRatio, files }) {
   return parseImageFromResponse(data, true);
 }
 
+
+const copywriterSceneOptions = {
+  diy: ['企业团建', '商场活动', '车企活动', '楼盘暖场'],
+  photobooth: ['婚礼', '宝宝百日宴', '生日派对', '企业活动', '闺蜜聚会']
+};
+
+const copywriterContentTypes = ['story', 'proposal'];
+const copywriterCategories = Object.keys(copywriterSceneOptions);
+const bannedCopyTerms = [
+  '私我', '加V', '戳我', '私信我', '加微信', '微信号', '手机号',
+  '扣1送', '三连抽', '评论区抽', '关注我领', '互关互赞',
+  '在当今', '随着', '值得一提的是', '综上所述', '谁能拒绝呢', '告别千篇一律',
+  '材料包', '报纸打印'
+];
+
+function getCopywriterApiConfig() {
+  const apiKey = process.env.COPYWRITER_API_KEY;
+  if (!apiKey) {
+    throw new Error('服务端缺少 COPYWRITER_API_KEY');
+  }
+  return {
+    apiKey,
+    baseUrl: normalizeBaseUrl(process.env.COPYWRITER_API_BASE_URL || 'https://api.deepseek.com/v1'),
+    model: process.env.COPYWRITER_MODEL || 'deepseek-chat',
+    maxTokens: Number(process.env.COPYWRITER_MAX_TOKENS || 3000)
+  };
+}
+
+function normalizeCopywriterPayload(body, mode) {
+  const category = String(body?.category || '').trim();
+  const scene = String(body?.scene || '').trim();
+  const contentType = String(body?.contentType || '').trim();
+  const draftInput = String(body?.draftInput || '').trim();
+  const draft = String(body?.draft || '').trim();
+
+  if (!copywriterCategories.includes(category)) {
+    throw new Error('请选择正确的业务类型');
+  }
+  if (!copywriterSceneOptions[category].includes(scene)) {
+    throw new Error('请选择正确的场景');
+  }
+  if (!copywriterContentTypes.includes(contentType)) {
+    throw new Error('请选择正确的文案类型');
+  }
+  if (draftInput.length > 3000) {
+    throw new Error('输入内容过长，请控制在 3000 字以内');
+  }
+  if (mode === 'optimize' && !draft) {
+    throw new Error('请先输入或生成需要优化的文案');
+  }
+  if (draft.length > 6000) {
+    throw new Error('待优化文案过长，请控制在 6000 字以内');
+  }
+
+  return { category, scene, contentType, draftInput, draft };
+}
+
+function contentTypeLabel(contentType) {
+  return contentType === 'proposal' ? '方案型' : '种草型';
+}
+
+function categoryLabel(category) {
+  return category === 'photobooth' ? '复古拍照机 photobooth' : '手工DIY团建';
+}
+
+function buildCopywriterBaseRules({ category, scene, contentType }) {
+  const sharedRules = `你是乐活互动的小红书文案顾问，熟悉珠三角本地活动营销。\n当前业务：${categoryLabel(category)}。\n当前场景：${scene}。\n文案类型：${contentTypeLabel(contentType)}。\n\n统一要求：\n- 输出中文，适合小红书发布，像真实运营人员写的，不要像广告公司提案。\n- 标题不超过20个中文字符。\n- 正文 200-500 字，每段不超过3行。\n- 结尾给 5-10 个话题标签，每个以 # 开头。\n- 标题和正文前几行自然出现城市或区域关键词，例如广州、深圳、佛山、东莞、珠三角。\n- 不出现手机号、微信号、二维码、加V、私我、戳我、私信我。\n- 不诱导点赞、收藏、评论、关注，不写抽奖福利。\n- 避免AI腔：不要写“在当今”“随着”“值得一提的是”“综上所述”“谁能拒绝呢”“告别千篇一律”。\n- 不要堆砌三连形容词，不要四字/八字口号堆叠。`;
+
+  if (category === 'photobooth') {
+    return `${sharedRules}\n\nphotobooth 业务要求：\n- 核心关键词是 photobooth、复古拍照机、婚礼拍照机、婚礼互动、备婚。\n- 标题必须包含“城市名 + photobooth”，例如“广州婚礼photobooth”。\n- 正文前3行必须自然出现“城市名 + photobooth”。\n- 强调可视化拍照、不盲拍、十几秒即拍即印、照片质感、模板设计、现场互动。\n- 语气像备婚/活动现场真实分享，不要官方硬广。\n- 不要使用“报纸”“报纸打印”“惊艳全场”“必入”等表达。`;
+  }
+
+  const diySceneRules = {
+    企业团建: '目标读者是企业HR/行政，重点写省心、不翻车、员工愿意参与、现场好交差。自然出现DIY/手工/手作和团建关键词。',
+    商场活动: '目标读者是商场/购物中心运营，重点写VIP会员沙龙、节日活动、停留时长、复购与打卡传播，不要写成普通路演。',
+    车企活动: '目标读者是车企/4S店运营，重点写延长客户停留时间、试驾留客、亲子/车主互动、销售沟通窗口。',
+    楼盘暖场: '目标读者是地产/楼盘策划，重点写家庭友好、大人看房小孩做手工、停留时长、销售沟通机会。'
+  };
+
+  return `${sharedRules}\n\nDIY 业务要求：\n- ${diySceneRules[scene]}\n- 强调定制课件、老师控场、流程省心、出片好看、珠三角可执行。\n- 站在客户视角写“客户能得到什么”，不要只介绍我们有什么。\n- 绝对不要出现“材料包”。\n- 正文不要硬塞“乐活互动”品牌名。`;
+}
+
+function buildCopywriterDraftPrompt(payload) {
+  return `${buildCopywriterBaseRules(payload)}\n\n你要完成“第一步：出文案”。\n请根据用户给的主题/项目线索，直接输出一版可编辑的小红书初稿。\n\n输出格式必须是：\n标题：...\n\n正文：\n...\n\n话题标签：\n#标签1 #标签2 #标签3`;
+}
+
+function buildCopywriterDraftUserMessage({ category, scene, contentType, draftInput }) {
+  const seed = draftInput || (category === 'photobooth' ? `${scene} photobooth 活动案例` : `${scene} DIY活动案例`);
+  return `请写一篇${categoryLabel(category)}的${contentTypeLabel(contentType)}小红书文案。\n场景：${scene}\n用户输入/主题：${seed}\n\n如果用户输入形如“端午节-艾草花束”，前半部分是活动主题，后半部分是具体项目，不能擅自改项目。`;
+}
+
+function buildCopywriterOptimizePrompt(payload) {
+  return `${buildCopywriterBaseRules(payload)}\n\n你要完成“第二步：分析并优化”。\n请先诊断用户文案，再给出一版更适合小红书搜索和转化的改写版。\n\n输出格式必须是：\n### 诊断打分\n- 标题：1-5分，说明原因\n- 正文：1-5分，说明原因\n- AI感检测：1-5分，说明原因\n- 话题标签：1-5分，说明原因\n- 关键词布局：1-5分，说明原因\n\n### 主要问题\n- ...\n- ...\n\n### 改写版\n标题：...\n\n正文：\n...\n\n话题标签：\n#标签1 #标签2 #标签3`;
+}
+
+function findCopywriterWarnings(text) {
+  const warnings = [];
+  for (const term of bannedCopyTerms) {
+    if (text.includes(term)) warnings.push(`检测到疑似禁用词：${term}`);
+  }
+  if (/1[3-9]\d{9}/.test(text)) warnings.push('检测到疑似手机号');
+  if (/(微信|VX|V信|wechat)[:：]?\s?[a-zA-Z0-9_-]{5,}/i.test(text)) warnings.push('检测到疑似微信联系方式');
+  return [...new Set(warnings)];
+}
+
+async function callCopywriterChat({ systemPrompt, userMessage, temperature = 0.7 }) {
+  const { apiKey, baseUrl, model, maxTokens } = getCopywriterApiConfig();
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature,
+      max_tokens: maxTokens
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.message || '文案模型请求失败');
+  }
+
+  const text = data?.choices?.[0]?.message?.content || data?.output_text || data?.text;
+  if (!text || !String(text).trim()) {
+    throw new Error('文案模型没有返回可用内容');
+  }
+  return String(text).trim();
+}
+
 app.post('/api/login', (req, res) => {
   const password = String(req.body?.password || '');
   if (password !== APP_PASSWORD) {
@@ -188,6 +324,53 @@ app.post('/api/logout', (_req, res) => {
 
 app.get('/api/session', (req, res) => {
   res.json({ authenticated: isValidSession(req.cookies[COOKIE_NAME]) });
+});
+
+
+app.post('/api/copywriter/draft', requireAuth, async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const payload = normalizeCopywriterPayload(req.body, 'draft');
+    const text = await callCopywriterChat({
+      systemPrompt: buildCopywriterDraftPrompt(payload),
+      userMessage: buildCopywriterDraftUserMessage(payload),
+      temperature: 0.75
+    });
+    res.json({ text, warnings: findCopywriterWarnings(text) });
+    console.log('copywriter draft success', {
+      category: payload.category,
+      scene: payload.scene,
+      contentType: payload.contentType,
+      ms: Date.now() - startedAt
+    });
+  } catch (error) {
+    console.error('copywriter draft failed', { message: error.message, ms: Date.now() - startedAt });
+    res.status(error.message?.startsWith('请选择') || error.message?.includes('过长') ? 400 : 500)
+      .json({ error: error.message || '文案生成失败' });
+  }
+});
+
+app.post('/api/copywriter/optimize', requireAuth, async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const payload = normalizeCopywriterPayload(req.body, 'optimize');
+    const text = await callCopywriterChat({
+      systemPrompt: buildCopywriterOptimizePrompt(payload),
+      userMessage: `请分析并优化以下文案：\n\n${payload.draft}`,
+      temperature: 0.55
+    });
+    res.json({ text, warnings: findCopywriterWarnings(text) });
+    console.log('copywriter optimize success', {
+      category: payload.category,
+      scene: payload.scene,
+      contentType: payload.contentType,
+      ms: Date.now() - startedAt
+    });
+  } catch (error) {
+    console.error('copywriter optimize failed', { message: error.message, ms: Date.now() - startedAt });
+    res.status(error.message?.startsWith('请选择') || error.message?.includes('过长') || error.message?.startsWith('请先') ? 400 : 500)
+      .json({ error: error.message || '文案优化失败' });
+  }
 });
 
 app.post('/api/generate', requireAuth, upload.array('referenceImages', 4), async (req, res) => {

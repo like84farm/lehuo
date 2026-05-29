@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AI小红书文案助手</title>
+  <link rel="stylesheet" href="/copywriter/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="tool-nav" aria-label="工具导航">
+      <a href="/">图片生成器</a>
+      <a href="/xhs/">模板文案</a>
+      <a class="active" href="/copywriter/">AI写文案</a>
+    </nav>
+
+    <section id="loginView" class="panel login-panel hidden">
+      <p class="eyebrow">乐活互动 · AI版</p>
+      <h1>AI小红书文案助手</h1>
+      <p class="muted">输入访问密码后使用 AI 出文案、诊断和优化。</p>
+      <form id="loginForm" class="login-form">
+        <input id="passwordInput" type="password" autocomplete="current-password" placeholder="访问密码" required>
+        <button type="submit">登录</button>
+      </form>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <section id="appView" class="hidden">
+      <header class="hero panel">
+        <div>
+          <p class="eyebrow">乐活互动 · AI写文案</p>
+          <h1>AI小红书文案助手</h1>
+          <p class="hero-text">独立于图片生成器的文案工具，适合手工DIY团建和复古拍照机 photobooth 两条业务线。</p>
+        </div>
+        <div class="hero-card">
+          <span>2步工作流</span>
+          <strong>先出稿，再优化</strong>
+          <p>第一步生成初稿，第二步按小红书搜索和转化逻辑诊断改写。</p>
+        </div>
+      </header>
+
+      <section class="panel input-panel">
+        <div class="section-title">
+          <div>
+            <h2>输入信息</h2>
+            <p>可以只写主题，也可以写“节日-具体项目”，例如：端午节-艾草花束。</p>
+          </div>
+          <button id="logoutButton" class="ghost" type="button">退出登录</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>业务类型</span>
+            <select id="categorySelect">
+              <option value="diy">手工DIY团建</option>
+              <option value="photobooth">复古拍照机 photobooth</option>
+            </select>
+          </label>
+
+          <label>
+            <span>场景</span>
+            <select id="sceneSelect"></select>
+          </label>
+
+          <label>
+            <span>文案类型</span>
+            <select id="contentTypeSelect">
+              <option value="story">种草型</option>
+              <option value="proposal">方案型</option>
+            </select>
+          </label>
+
+          <label class="full">
+            <span>主题 / 初稿</span>
+            <textarea id="draftInput" rows="11" placeholder="例如：端午节-艾草花束，广州商场端午会员活动，想突出高级感、亲子参与和出片"></textarea>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="draftButton" class="primary" type="button">第一步：出文案</button>
+          <button id="optimizeButton" class="secondary" type="button">第二步：分析并优化</button>
+          <button id="copyButton" class="ghost" type="button">复制优化结果</button>
+        </div>
+        <p id="statusText" class="status">请选择业务和场景，输入主题后开始。</p>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="section-title">
+          <div>
+            <h2>AI输出</h2>
+            <p>输出前请按真实活动信息复核，不要直接发布未经确认的细节。</p>
+          </div>
+        </div>
+        <div id="warningBox" class="warning-box hidden"></div>
+        <article id="outputBox" class="output-box placeholder">优化结果会显示在这里。</article>
+      </section>
+    </section>
+  </main>
+
+  <script src="/copywriter/script.js"></script>
+</body>
+</html>

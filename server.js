@@ -307,6 +307,111 @@ async function callCopywriterChat({ systemPrompt, userMessage, temperature = 0.7
   return String(text).trim();
 }
 
+
+function getGptApiConfig() {
+  const apiKey = process.env.GPT_API_KEY;
+  if (!apiKey) {
+    throw new Error('服务端缺少 GPT_API_KEY');
+  }
+  return {
+    apiKey,
+    baseUrl: normalizeBaseUrl(process.env.GPT_API_BASE_URL || 'https://api.openai.com/v1'),
+    model: process.env.GPT_MODEL || 'gpt-4o-mini',
+    maxTokens: Number(process.env.GPT_MAX_TOKENS || 4000),
+    temperature: Number(process.env.GPT_TEMPERATURE || 0.7)
+  };
+}
+
+function normalizeGptMessages(body) {
+  const messages = body?.messages;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('请输入聊天内容');
+  }
+
+  const allowedRoles = new Set(['system', 'user', 'assistant']);
+  const normalized = messages.slice(-24).map((message) => {
+    const role = String(message?.role || '').trim();
+    const content = String(message?.content || '').trim();
+    if (!allowedRoles.has(role) || !content) {
+      throw new Error('聊天内容格式不正确');
+    }
+    return { role, content: content.slice(0, 8000) };
+  });
+
+  const totalLength = normalized.reduce((sum, message) => sum + message.content.length, 0);
+  if (totalLength > 32000) {
+    throw new Error('聊天上下文过长，请开启新对话');
+  }
+
+  return normalized;
+}
+
+function extractSseText(line) {
+  if (!line.startsWith('data:')) return '';
+  const data = line.slice(5).trim();
+  if (!data || data === '[DONE]') return '';
+
+  try {
+    const parsed = JSON.parse(data);
+    return parsed?.choices?.[0]?.delta?.content || parsed?.choices?.[0]?.message?.content || '';
+  } catch {
+    return '';
+  }
+}
+
+async function streamGptChat(messages, res) {
+  const { apiKey, baseUrl, model, maxTokens, temperature } = getGptApiConfig();
+  const upstream = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream: true
+    })
+  });
+
+  if (!upstream.ok) {
+    const data = await upstream.json().catch(() => ({}));
+    throw new Error(data?.error?.message || data?.message || 'GPT 请求失败');
+  }
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const reader = upstream.body?.getReader();
+  if (!reader) throw new Error('GPT 响应不可读取');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const text = extractSseText(line);
+      if (text) res.write(text);
+    }
+  }
+
+  if (buffer) {
+    const text = extractSseText(buffer);
+    if (text) res.write(text);
+  }
+}
+
 app.post('/api/login', (req, res) => {
   const password = String(req.body?.password || '');
   if (password !== APP_PASSWORD) {
@@ -326,6 +431,26 @@ app.get('/api/session', (req, res) => {
   res.json({ authenticated: isValidSession(req.cookies[COOKIE_NAME]) });
 });
 
+
+
+app.post('/api/chat', requireAuth, async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const messages = normalizeGptMessages(req.body);
+    await streamGptChat(messages, res);
+    res.end();
+    console.log('gpt chat success', { messages: messages.length, ms: Date.now() - startedAt });
+  } catch (error) {
+    console.error('gpt chat failed', { message: error.message, ms: Date.now() - startedAt });
+    if (!res.headersSent) {
+      const isBadRequest = error.message?.includes('聊天') || error.message?.includes('上下文');
+      res.status(isBadRequest ? 400 : 500).json({ error: error.message || 'GPT 请求失败' });
+      return;
+    }
+    res.write(`\n\n[错误] ${error.message || 'GPT 请求失败'}`);
+    res.end();
+  }
+});
 
 app.post('/api/copywriter/draft', requireAuth, async (req, res) => {
   const startedAt = Date.now();

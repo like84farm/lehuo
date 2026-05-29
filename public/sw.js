@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lehuo-pwa-v3';
+const CACHE_NAME = 'lehuo-pwa-v4';
 const APP_SHELL = [
   '/',
   '/styles.css',
@@ -11,7 +11,11 @@ const APP_SHELL = [
   '/copywriter/',
   '/copywriter/index.html',
   '/copywriter/style.css',
-  '/copywriter/script.js'
+  '/copywriter/script.js',
+  '/gpt/',
+  '/gpt/index.html',
+  '/gpt/style.css',
+  '/gpt/script.js'
 ];
 
 self.addEventListener('install', (event) => {

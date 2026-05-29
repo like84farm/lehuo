@@ -15,6 +15,7 @@ const statusText = document.querySelector('#statusText');
 const resultEmpty = document.querySelector('#resultEmpty');
 const resultImage = document.querySelector('#resultImage');
 const downloadLink = document.querySelector('#downloadLink');
+const installButton = document.querySelector('#installButton');
 const maxReferenceFiles = 4;
 const maxReferenceDimension = 1600;
 const referenceOutputQuality = 0.82;
@@ -196,6 +197,28 @@ generateButton.addEventListener('click', async () => {
 });
 
 checkSession().catch(() => setAuthenticated(false));
+
+let installPromptEvent = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPromptEvent = event;
+  installButton?.classList.remove('hidden');
+});
+
+installButton?.addEventListener('click', async () => {
+  if (!installPromptEvent) return;
+
+  installButton.classList.add('hidden');
+  installPromptEvent.prompt();
+  await installPromptEvent.userChoice;
+  installPromptEvent = null;
+});
+
+window.addEventListener('appinstalled', () => {
+  installPromptEvent = null;
+  installButton?.classList.add('hidden');
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

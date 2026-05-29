@@ -280,6 +280,14 @@ h2 {
   display: none !important;
 }
 
+.install-button {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 20;
+  box-shadow: 0 16px 40px rgba(17, 17, 17, 0.24);
+}
+
 @media (max-width: 860px) {
   .shell {
     width: min(100% - 20px, 720px);

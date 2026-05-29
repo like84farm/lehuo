@@ -315,8 +315,8 @@ function getGptApiConfig() {
   }
   return {
     apiKey,
-    baseUrl: normalizeBaseUrl(process.env.GPT_API_BASE_URL || 'https://api.openai.com/v1'),
-    model: process.env.GPT_MODEL || 'gpt-4o-mini',
+    baseUrl: normalizeBaseUrl(process.env.GPT_API_BASE_URL || 'https://llmhub.ltd/v1'),
+    model: process.env.GPT_MODEL || 'gpt-5.5',
     maxTokens: Number(process.env.GPT_MAX_TOKENS || 4000),
     temperature: Number(process.env.GPT_TEMPERATURE || 0.7)
   };

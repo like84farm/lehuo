@@ -23,9 +23,9 @@ services:
       - key: COPYWRITER_API_KEY
         sync: false
       - key: GPT_API_BASE_URL
-        value: https://api.openai.com/v1
+        value: https://llmhub.ltd/v1
       - key: GPT_MODEL
-        value: gpt-4o-mini
+        value: gpt-5.5
       - key: GPT_MAX_TOKENS
         value: 4000
       - key: GPT_TEMPERATURE

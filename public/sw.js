@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lehuo-pwa-v2';
+const CACHE_NAME = 'lehuo-pwa-v3';
 const APP_SHELL = [
   '/',
   '/styles.css',
